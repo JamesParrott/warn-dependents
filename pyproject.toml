@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "warn-dependents"
+dynamic = ["version"]
+description = 'Email the authors and maintainers of all projects using a PyPi project (e.g. yours) downstream.  By default, warn them it is intended to drop support for old Python versions.'
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "JamesParrott", email = "james.parrott@proton.me" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "rev-deps",
+  "maintainers-and-authors",
+]
+
+[project.urls]
+Issues = "https://github.com/JamesParrott/warn-dependents/issues"
+Source = "https://github.com/JamesParrott/warn-dependents"
+
+[project.scripts]
+warn-dependents = "warn_dependents.cli:main"
+
+[tool.hatch.version]
+path = "src/warn_dependents/__about__.py"

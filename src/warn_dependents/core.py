@@ -13,7 +13,8 @@ def _make_email_payload(
     upstream_project_name: str,
     projects_meta_data: dict, 
     subject: str | None = None,
-    ,**kwargs):
+    **kwargs
+    ):
 
     subject = subject or (f'{upstream_project_name.capitalize()} to drop support '
                           f' for Pythons older than '
@@ -21,9 +22,7 @@ def _make_email_payload(
     )
 
     message_body = """\
-    Wubalubadubdub!!!
-
-    This is a test email, sent from Python via Plunk's REST API.
+    Dear {}
 
     """
 
@@ -42,6 +41,7 @@ def _make_email_payload(
     )
 
     return kwargs
+
     
 def _send_email(email_address, email_payload):
 

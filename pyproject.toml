@@ -26,6 +26,8 @@ classifiers = [
 dependencies = [
   "rev-deps",
   "maintainers-and-authors",
+  "requests",
+  "nameutils",
 ]
 
 [project.urls]

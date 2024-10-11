@@ -5,6 +5,7 @@ from typing import Iterator
 
 import requests
 import nameutils
+import inflect
 
 import maintainers_and_authors.api
 
@@ -43,9 +44,10 @@ def _python_version_classifiers(meta_data: dict[str, str]) -> Iterator[tuple[str
             try:
                 version = maintainers_and_authors.api.version_tuple_from_str(category)
             except ValueError:
-                pass
-            else:
-                yield entry, version
+                continue
+            if version == (3,):
+                continue
+            yield entry, version
 
 
 def _given_names(full_name: str) -> str:
@@ -60,7 +62,7 @@ def _given_names(full_name: str) -> str:
     return ' '.join(nameparts[1:])
 
 
-
+inflect_engine = inflect.engine()
 
 def _make_email_payload(
     to: frozenset[str],
@@ -76,13 +78,13 @@ def _make_email_payload(
 
     project_names = list(projects_data)
 
-    first_project_full_names = next(iter(projects_data.values()))['maintainers_and_authors']
+    full_names_for_emails = dict(zip(*first_project['maintainers_and_authors']))
 
     upstream_project_name = upstream_project_name.capitalize()
     min_python_version_str = ".".join(str(x) for x in min_python_version)
     maintainers_and_authors_given_names = ', '.join(
-                    _given_names(full_name)
-                    for full_name in next(iter(projects_data.values()))['maintainers_and_authors'][1]
+                    _given_names(full_names_for_emails[email])
+                    for email in to
                     )
 
     subject = subject or (f'{upstream_project_name} to drop support for '
@@ -92,16 +94,16 @@ def _make_email_payload(
 
 
     message_body = f"""\
-    Dear {maintainers_and_authors_given_names or 'fellow project developer(s)'},
+    Dear {maintainers_and_authors_given_names or 'Sir/Madam'},
 
     The developers of {upstream_project_name}, are considering dropping 
-    support for Pythons older than version {min_python_version_str}.  Please
-    post any feedback regarding this decision on our discussions page:
+    support for Pythons older than version {min_python_version_str}.  Any feedback 
+    about this is most welcome on our discussions page:
     http://www.github.com/{kwargs.get('Github_organisation', 'GeospatialPython')}/{upstream_project_name}/discussions
     particularly if it would have adverse effects for your projects: {', '.join(projects_data)}.
 
     No projects will be broken, as no old versions of {upstream_project_name} will be yanked.  This
-    decision would just mean users that use older Python versions, that use your projects, would 
+    decision would just mean your own users, that use older Python versions, would 
     not be able to install the latest version of {upstream_project_name}.  If new bugs in older versions
     of {upstream_project_name} for older Pythons are found, the default advice would become "upgrade Python to 
     a supported version".

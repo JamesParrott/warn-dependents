@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = 'Email the authors and maintainers of all projects using a PyPi project (e.g. yours) downstream.  By default, warn them it is intended to drop support for old Python versions.'
 readme = "README.md"
 requires-python = ">=3.9"
-license = "MIT"
+license = "AGPL-3.0-or-later"
 keywords = []
 authors = [
   { name = "JamesParrott", email = "james.parrott@proton.me" },
@@ -28,6 +28,7 @@ dependencies = [
   "maintainers-and-authors",
   "requests",
   "nameutils",
+  "inflect",
 ]
 
 [project.urls]

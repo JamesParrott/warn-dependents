@@ -1,4 +1,5 @@
 import os
+import pathlib
 import string
 from typing import Iterator
 
@@ -59,6 +60,8 @@ def _given_names(full_name: str) -> str:
     return ' '.join(nameparts[1:])
 
 
+
+
 def _make_email_payload(
     to: frozenset[str],
     sender_name: str,
@@ -69,9 +72,11 @@ def _make_email_payload(
     **kwargs
     ):
 
-    first_project_full_names = next(iter(projects_data.values()))['maintainers_and_authors']
+    first_project_name, first_project = next(iter(projects_data.items()))
 
-    print(f'{first_project_full_names=}')
+    project_names = list(projects_data)
+
+    first_project_full_names = next(iter(projects_data.values()))['maintainers_and_authors']
 
     upstream_project_name = upstream_project_name.capitalize()
     min_python_version_str = ".".join(str(x) for x in min_python_version)
@@ -84,8 +89,10 @@ def _make_email_payload(
                           f'Pythons older than {min_python_version_str}. '
                          )
 
+
+
     message_body = f"""\
-    Dear {maintainers_and_authors_given_names},
+    Dear {maintainers_and_authors_given_names or 'fellow project developer(s)'},
 
     The developers of {upstream_project_name}, are considering dropping 
     support for Pythons older than version {min_python_version_str}.  Please
@@ -121,7 +128,7 @@ def _make_email_payload(
          Python version constraints (all enforced by pip) {project_data['requires_python_clauses']}
 """
         classifiers_info = f"""\
-         Python version trove classifiers: {'                         \n'.join(project_data['unsupported_trove_classifiers'])}\
+         Python version trove classifiers: {('\n' + ' '*43).join(project_data['unsupported_trove_classifiers'])}\
 """ if project_data['trove_classifiers'] else """
          No Python version trove classifiers found."""
         
@@ -142,10 +149,13 @@ def _make_email_payload(
 
     return kwargs
 
-    
+
+EMAILS_FILE = pathlib.Path("emails.txt")
+
 def _send_email(email_address, email_payload):
 
-    print(f'Sending mail to: {email_address}\n subject: {email_payload["subject"]}\n message: {email_payload["body"]}\n')
+    with EMAILS_FILE.open('at') as f:
+        f.write(f'Sending mail to: {email_address}\n subject: {email_payload["subject"]}\n message: {email_payload["body"]}\n')
 
     # url = "https://api.useplunk.com/v1/send/"
 

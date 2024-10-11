@@ -47,6 +47,17 @@ def _python_version_classifiers(meta_data: dict[str, str]) -> Iterator[tuple[str
                 yield entry, version
 
 
+def _given_names(full_name: str) -> str:
+    nameparts = nameutils.nameparts(full_name)[1:]
+    
+    if not nameparts:
+        return full_name
+
+    if len(nameparts) == 1:
+        return nameparts[0]
+    
+    return ' '.join(nameparts[1:])
+
 
 def _make_email_payload(
     to: frozenset[str],
@@ -58,11 +69,15 @@ def _make_email_payload(
     **kwargs
     ):
 
+    first_project_full_names = next(iter(projects_data.values()))['maintainers_and_authors']
+
+    print(f'{first_project_full_names=}')
+
     upstream_project_name = upstream_project_name.capitalize()
     min_python_version_str = ".".join(str(x) for x in min_python_version)
     maintainers_and_authors_given_names = ', '.join(
-                    nameutils.nameparts(full_name)[1]
-                    for full_name in projects_data['maintainers_and_authors'][1]
+                    _given_names(full_name)
+                    for full_name in next(iter(projects_data.values()))['maintainers_and_authors'][1]
                     )
 
     subject = subject or (f'{upstream_project_name} to drop support for '
@@ -76,24 +91,24 @@ def _make_email_payload(
     support for Pythons older than version {min_python_version_str}.  Please
     post any feedback regarding this decision on our discussions page:
     http://www.github.com/{kwargs.get('Github_organisation', 'GeospatialPython')}/{upstream_project_name}/discussions
-    , particularly if it would have adverse effects for your projects: {', '.join(projects_data)}.
+    particularly if it would have adverse effects for your projects: {', '.join(projects_data)}.
 
     No projects will be broken, as no old versions of {upstream_project_name} will be yanked.  This
     decision would just mean users that use older Python versions, that use your projects, would 
     not be able to install the latest version of {upstream_project_name}.  If new bugs in older versions
-    of {upstream_project_name} for older Pythons are found, our advice will be to upgrade Python version.
-    Fixes for older unsupported versions would be at our discretion, and may rely on others' contributions.
+    of {upstream_project_name} for older Pythons are found, the default advice would become "upgrade Python to 
+    a supported version".
     
     Thanks for using {upstream_project_name}!
 
-    {sender_name.capitalize()}.
+    {sender_name}.
 
     
     P.S. You have received this email because all of the following conditions have been met:
          i) Your projects: {', '.join(projects_data)} are listed as reverse dependencies of {upstream_project_name} on Wheelodex.
-         ii) For a Python version we propose to drop no clause was found to prevent installation of each of these projects.   
+         ii) For a Python version we propose to drop, no clause was found to prevent installation of each of these projects.   
          iii) For each of these projects, either there were no Python version trove classifiers, or they included a 
-         Python version we propose to drop.  See below for details: {projects_data['clauses']}
+         Python version we propose to drop.  
          Further details below:
 """
 
@@ -102,12 +117,12 @@ def _make_email_payload(
 
         message_body = f"""{message_body}
 
-        {project_name}
-         Python version constraints (all enforced by pip) {meta_data['requires_python_clauses']}
+         Project: {project_name}
+         Python version constraints (all enforced by pip) {project_data['requires_python_clauses']}
 """
-        classifiers_info = f"""
-         Python version trove classifiers: {'                         \n'.join(meta_data['unsupported_trove_classifiers'])}\
-""" if meta_data['trove_classifiers'] else """
+        classifiers_info = f"""\
+         Python version trove classifiers: {'                         \n'.join(project_data['unsupported_trove_classifiers'])}\
+""" if project_data['trove_classifiers'] else """
          No Python version trove classifiers found."""
         
         message_body = f"{message_body}{classifiers_info}"
@@ -130,7 +145,7 @@ def _make_email_payload(
     
 def _send_email(email_address, email_payload):
 
-    print(f'Sending mail to: {email_address}\n subject: {email_payload["subject"]}\n message: {email_payload["payload"]}\n')
+    print(f'Sending mail to: {email_address}\n subject: {email_payload["subject"]}\n message: {email_payload["body"]}\n')
 
     # url = "https://api.useplunk.com/v1/send/"
 

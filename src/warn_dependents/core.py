@@ -109,7 +109,7 @@ def _make_email_payload(
          ii) For a Python version we propose to drop, no clause was found to prevent installation of each of these projects.   
          iii) For each of these projects, either there were no Python version trove classifiers, or they included a 
          Python version we propose to drop.  
-         Further details below:
+         Further details below:\
 """
 
     for project_name, project_data in projects_data.items():

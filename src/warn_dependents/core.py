@@ -1,9 +1,10 @@
 import os
 import pathlib
+import smtplib, ssl
 import string
 from typing import Iterator
 
-import requests
+from sparkpost import SparkPost
 import nameutils
 import inflect
 
@@ -67,6 +68,7 @@ inflect_engine = inflect.engine()
 def _make_email_payload(
     to: frozenset[str],
     sender_name: str,
+    sender_email: str,
     min_python_version: tuple,
     upstream_project_name: str,
     projects_data: dict, 
@@ -93,55 +95,58 @@ def _make_email_payload(
 
 
 
+    url = f"http://www.github.com/{kwargs.get('Github_organisation', 'GeospatialPython')}/{upstream_project_name}/discussions"
+
     message_body = f"""\
-    Dear {maintainers_and_authors_given_names or 'Sir/Madam'},
+Dear {maintainers_and_authors_given_names or 'Sir/Madam'},
 
-    The developers of {upstream_project_name}, are considering dropping 
-    support for Pythons older than version {min_python_version_str}.  Any feedback 
-    about this is most welcome on our discussions page:
-    http://www.github.com/{kwargs.get('Github_organisation', 'GeospatialPython')}/{upstream_project_name}/discussions
-    particularly if it would have adverse effects for your projects: {', '.join(projects_data)}.
+The developers of {upstream_project_name} (including myself) are considering dropping 
+support for Pythons older than version {min_python_version_str}.  Any feedback 
+about this is most welcome on our discussions page:
+{url}
+particularly if it would have adverse effects for your projects: {', '.join(projects_data)}.
 
-    No projects will be broken, as no old versions of {upstream_project_name} will be yanked.  This
-    decision would just mean your own users, that use older Python versions, would 
-    not be able to install the latest version of {upstream_project_name}.  If new bugs in older versions
-    of {upstream_project_name} for older Pythons are found, the default advice would become "upgrade Python to 
-    a supported version".
+No projects will be broken, as no old versions of {upstream_project_name} will be yanked.  This
+decision would just mean your own users, that use older Python versions, would 
+not be able to install the latest version of {upstream_project_name}.  If new bugs in older versions
+of {upstream_project_name} for older Pythons are found, the default advice would become "upgrade Python to 
+a supported version".
+
+Thanks for using {upstream_project_name}!
+
+{sender_name}.
+
     
-    Thanks for using {upstream_project_name}!
-
-    {sender_name}.
-
-    
-    P.S. You have received this email because all of the following conditions have been met:
-         i) Your projects: {', '.join(projects_data)} are listed as reverse dependencies of {upstream_project_name} on Wheelodex.
-         ii) For a Python version we propose to drop, no clause was found to prevent installation of each of these projects.   
-         iii) For each of these projects, either there were no Python version trove classifiers, or they included a 
-         Python version we propose to drop.  
-         Further details below:\
+P.S. You have received this email because all of the following conditions have been met:
+i) Your projects: {', '.join(projects_data)} are listed as reverse dependencies of {upstream_project_name} on Wheelodex.
+ii) For a Python version we propose to drop, no clause was found to prevent installation of each of these projects.   
+iii) For each of these projects, either there were no Python version trove classifiers, or they included a 
+Python version we propose to drop.  
+Further details below:\
 """
 
     for project_name, project_data in projects_data.items():
         meta_data = project_data['meta_data']
 
         message_body = f"""{message_body}
-
-         Project: {project_name}
-         Python version constraints (all enforced by pip) {project_data['requires_python_clauses']}
+Project: {project_name}
+Python version constraints (all enforced by pip) {project_data['requires_python_clauses']}
 """
         classifiers_info = f"""\
-         Python version trove classifiers: {('\n' + ' '*43).join(project_data['unsupported_trove_classifiers'])}\
+Python version trove classifiers: 
+{'\n'.join(project_data['unsupported_trove_classifiers'])}
 """ if project_data['trove_classifiers'] else """
-         No Python version trove classifiers found."""
+No Python version trove classifiers found."""
         
         message_body = f"{message_body}{classifiers_info}"
 
-    # https://docs.useplunk.com/api-reference/transactional/send
+    html = f'<div dir="ltr">\n{message_body}</div>\n\n'.replace('\n','<br>')
+
     kwargs.update(
-        to = list(to),
+        recipients = list(to),
         subject = subject,
-        body = message_body,
-        name = sender_name,
+        html = html,
+        from_email = sender_email,
         # "subscribed": # Defaults to False,
         # "name": None, # Sender name.  Defaults to project name
         # "from": defaults to verified email address,
@@ -154,23 +159,31 @@ def _make_email_payload(
 
 EMAILS_FILE = pathlib.Path("emails.txt")
 
-def _send_email(email_address, email_payload):
 
-    with EMAILS_FILE.open('at') as f:
-        f.write(f'Sending mail to: {email_address}\n subject: {email_payload["subject"]}\n message: {email_payload["body"]}\n')
 
-    # url = "https://api.useplunk.com/v1/send/"
+sp = SparkPost() # uses environment variable SPARKPOST_API_KEY
 
-    # headers = {
-    #     "Content-Type": "application/json",
-    #     "Authorization": f"Bearer {os.getenv('PLUNK_API_KEY')}",
-    # }
+def _send_email(email_payload):
 
-    # return requests.post(url, json=email_payload, headers=headers)
+    # with open(EMAILS_FILE, 'at') as f:
+    #     f.write(f'Sending email to: {email_payload["recipients"]}\n Subject: {email_payload["subject"]}\n {email_payload["html"]} \n\n')
+
+    # return None
+
+    return sp.transmissions.send(**email_payload)
+
+    # https://github.com/SparkPost/python-sparkpost?tab=readme-ov-file#send-a-message
+    # return sp.transmissions.send(
+    #     recipients=['james.parrott@proton.me'],
+    #     html='<p>Hello world</p>',
+    #     from_email='pyshp@mail.jamesparrott.dev',
+    #     subject='Hello from python-sparkpost'
+    # )
 
 
 def _send_email_to_all_dependents(
     sender_name: str,
+    sender_email:str,
     min_python_version: tuple,
     upstream_project_name: str | None = None,
     make_email_payload = _make_email_payload,
@@ -203,6 +216,11 @@ def _send_email_to_all_dependents(
     maintnrs_and_authors_meta_data = maintainers_and_authors.api.email_addresses(min_python_version)
 
 
+    # context = ssl.create_default_context()
+    # with smtplib.SMTP('smtp.useplunk.com',587) as smtp:
+    #     smtp.starttls(context=context)
+    #     smtp.login('plunk', os.getenv('PLUNK_API_KEY'))
+    
     for email_addresses, projects_data in maintnrs_and_authors_meta_data.items():
 
         project_names = list(projects_data)
@@ -243,11 +261,18 @@ def _send_email_to_all_dependents(
         email_payload = make_email_payload(
             to=email_addresses,
             sender_name=sender_name,
+            sender_email=sender_email,
             min_python_version=min_python_version,
             upstream_project_name=upstream_project_name,
             projects_data=projects_data,
             **kwargs
             )
 
-        send_email(email_addresses, email_payload)
+            # smtp.sendmail(
+            #     'pyshp@jamesparrott.dev',
+            #     ', '.join(email_addresses),
+            #     f"Subject: {email_payload['subject']}\n\n{email_payload['body']}",
+            #     )
+
+        send_email(email_payload)
 

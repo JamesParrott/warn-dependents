@@ -15,7 +15,7 @@ pip install warn-dependents
 
 ## Usage
 
-warn-dependents <project_name> <Python_version>
+warn-dependents <sender_name> <sender_email> <project_name> <Python_version>
 
 ## License
 

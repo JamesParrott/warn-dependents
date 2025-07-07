@@ -29,7 +29,7 @@ dependencies = [
   "requests",
   "nameutils",
   "inflect",
-  "pystmark",
+  "sparkpost",
 ]
 
 [project.urls]

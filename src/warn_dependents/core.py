@@ -8,6 +8,7 @@ from typing import Iterator
 import pystmark
 import nameutils
 import inflect
+from sparkpost import SparkPost
 
 import maintainers_and_authors.api
 
@@ -145,18 +146,18 @@ No Python version trove classifiers found."""
     html = f'<div dir="ltr">\n{message_body}</div>\n\n'.replace('\n','<br>\n')
 
     kwargs.update(
-        to = list(to), #['me_myself_and_i@jamesparrott.dev'], #list(to),
+        to = list(to),
         subject = subject,
         text = message_body,
         html = html,
         sender = sender_email,
-        tag = 'deprecation_announcement', #f'Feedback request re: {upstream_project_name} dropping old Python versions.'
+        # tag = 'deprecation_announcement', #f'Feedback request re: {upstream_project_name} dropping old Python versions.'
         # "subscribed": # Defaults to False,
         # "name": None, # Sender name.  Defaults to project name
         # "from": defaults to verified email address,
         # "reply": defaults to verified email address,
         # headers = {},
-        message_stream='broadcast',
+        # message_stream='broadcast',
     )
 
     return kwargs
@@ -166,24 +167,28 @@ EMAILS_FILE = pathlib.Path("emails.txt")
 
 
 
-# sp = SparkPost() # uses environment variable SPARKPOST_API_KEY
+sp = SparkPost() # uses environment variable SPARKPOST_API_KEY
 
-# def _send_email(email_payload):
+def _send_email_via_sparkpost(email_payload):
 
-#     # with open(EMAILS_FILE, 'at') as f:
-#     #     f.write(f'Sending email to: {email_payload["to"]}\n Subject: {email_payload["subject"]}\n {email_payload["html"]} \n\n')
+    with open(EMAILS_FILE, 'at') as f:
+        f.write(f'Sending email to: {email_payload["to"]}\n Subject: {email_payload["subject"]}\n {email_payload["html"]} \n\n')
 
-#     # return None
+    # return None
 
-#     return sp.transmissions.send(**email_payload)
+    return sp.transmissions.send(
+        recipients = email_payload.pop('to'),
+        from_email = email_payload.pop('sender'),
+        **email_payload
+        )
 
-#     # https://github.com/SparkPost/python-sparkpost?tab=readme-ov-file#send-a-message
-#     # return sp.transmissions.send(
-#     #     recipients=['james.parrott@proton.me'],
-#     #     html='<p>Hello world</p>',
-#     #     from_email='pyshp@mail.jamesparrott.dev',
-#     #     subject='Hello from python-sparkpost'
-#     # )
+    # https://github.com/SparkPost/python-sparkpost?tab=readme-ov-file#send-a-message
+    # return sp.transmissions.send(
+    #     recipients=['james.parrott@proton.me'],
+    #     html='<p>Hello world</p>',
+    #     from_email='pyshp@mail.jamesparrott.dev',
+    #     subject='Hello from python-sparkpost'
+    # )
 
 
 def _send_email_to_all_dependents(
@@ -279,7 +284,7 @@ def _send_email_to_all_dependents(
             **kwargs
             )
 
-        payloads.append(email_payload)
+        # payloads.append(email_payload)
 
         # smtp.sendmail(
         #     'pyshp@jamesparrott.dev',
@@ -287,14 +292,14 @@ def _send_email_to_all_dependents(
         #     f"Subject: {email_payload['subject']}\n\n{email_payload['body']}",
         #     )
 
-        # send_email(email_payload)
+        _send_email_via_sparkpost(email_payload)
 
 
     # >>> with open('pyshp_rev_deps.txt','at') as f, open('rdepends.json','rt') as j:
     # ...     f.write('\n'.join(entry["name"].lower().replace('_','-') for entry in json.load(j)['items']))
     # 
 
-    EMAILS_FILE.write_text(json.dumps(payloads))
+    # EMAILS_FILE.write_text(json.dumps(payloads))
 
     # with open(EMAILS_FILE, 'at') as f:
     #     for payload in payloads:

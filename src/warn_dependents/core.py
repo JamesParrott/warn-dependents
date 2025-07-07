@@ -1,10 +1,11 @@
 import os
+import json
 import pathlib
 import smtplib, ssl
 import string
 from typing import Iterator
 
-from sparkpost import SparkPost
+import pystmark
 import nameutils
 import inflect
 
@@ -15,9 +16,10 @@ import maintainers_and_authors.api
 
 def _python_version_clauses(meta_data: dict[str, str]) -> Iterator[tuple[str, str]]:
     
-    if 'requires_python' in meta_data:
+    clauses = meta_data.get('requires_python')
+    if clauses:
 
-        for clause in meta_data['requires_python'].split(','):
+        for clause in clauses.split(','):
 
             clause = clause.strip().replace(' ','')
 
@@ -73,7 +75,7 @@ def _make_email_payload(
     upstream_project_name: str,
     projects_data: dict, 
     subject: str | None = None,
-    **kwargs
+    **kwargs,
     ):
 
     first_project_name, first_project = next(iter(projects_data.items()))
@@ -140,18 +142,21 @@ No Python version trove classifiers found."""
         
         message_body = f"{message_body}{classifiers_info}"
 
-    html = f'<div dir="ltr">\n{message_body}</div>\n\n'.replace('\n','<br>')
+    html = f'<div dir="ltr">\n{message_body}</div>\n\n'.replace('\n','<br>\n')
 
     kwargs.update(
-        recipients = list(to),
+        to = list(to), #['me_myself_and_i@jamesparrott.dev'], #list(to),
         subject = subject,
+        text = message_body,
         html = html,
-        from_email = sender_email,
+        sender = sender_email,
+        tag = 'deprecation_announcement', #f'Feedback request re: {upstream_project_name} dropping old Python versions.'
         # "subscribed": # Defaults to False,
         # "name": None, # Sender name.  Defaults to project name
         # "from": defaults to verified email address,
         # "reply": defaults to verified email address,
-        headers = {},
+        # headers = {},
+        message_stream='broadcast',
     )
 
     return kwargs
@@ -161,24 +166,24 @@ EMAILS_FILE = pathlib.Path("emails.txt")
 
 
 
-sp = SparkPost() # uses environment variable SPARKPOST_API_KEY
+# sp = SparkPost() # uses environment variable SPARKPOST_API_KEY
 
-def _send_email(email_payload):
+# def _send_email(email_payload):
 
-    # with open(EMAILS_FILE, 'at') as f:
-    #     f.write(f'Sending email to: {email_payload["recipients"]}\n Subject: {email_payload["subject"]}\n {email_payload["html"]} \n\n')
+#     # with open(EMAILS_FILE, 'at') as f:
+#     #     f.write(f'Sending email to: {email_payload["to"]}\n Subject: {email_payload["subject"]}\n {email_payload["html"]} \n\n')
 
-    # return None
+#     # return None
 
-    return sp.transmissions.send(**email_payload)
+#     return sp.transmissions.send(**email_payload)
 
-    # https://github.com/SparkPost/python-sparkpost?tab=readme-ov-file#send-a-message
-    # return sp.transmissions.send(
-    #     recipients=['james.parrott@proton.me'],
-    #     html='<p>Hello world</p>',
-    #     from_email='pyshp@mail.jamesparrott.dev',
-    #     subject='Hello from python-sparkpost'
-    # )
+#     # https://github.com/SparkPost/python-sparkpost?tab=readme-ov-file#send-a-message
+#     # return sp.transmissions.send(
+#     #     recipients=['james.parrott@proton.me'],
+#     #     html='<p>Hello world</p>',
+#     #     from_email='pyshp@mail.jamesparrott.dev',
+#     #     subject='Hello from python-sparkpost'
+#     # )
 
 
 def _send_email_to_all_dependents(
@@ -187,7 +192,8 @@ def _send_email_to_all_dependents(
     min_python_version: tuple,
     upstream_project_name: str | None = None,
     make_email_payload = _make_email_payload,
-    send_email = _send_email,
+    # send_email = _send_email,
+    maintnrs_and_authors_meta_data: dict | None = None,
     **kwargs
     ) -> None:
 
@@ -213,7 +219,9 @@ def _send_email_to_all_dependents(
 
 
         return False
-    maintnrs_and_authors_meta_data = maintainers_and_authors.api.email_addresses(min_python_version)
+    if maintnrs_and_authors_meta_data is None:
+        # Reads from stdin.  Pipe project names from file or rev-deps.
+        maintnrs_and_authors_meta_data = maintainers_and_authors.api.email_addresses(min_python_version)
 
 
     # context = ssl.create_default_context()
@@ -221,6 +229,8 @@ def _send_email_to_all_dependents(
     #     smtp.starttls(context=context)
     #     smtp.login('plunk', os.getenv('PLUNK_API_KEY'))
     
+    payloads = []
+
     for email_addresses, projects_data in maintnrs_and_authors_meta_data.items():
 
         project_names = list(projects_data)
@@ -231,6 +241,7 @@ def _send_email_to_all_dependents(
             meta_data = project_data['meta_data']
 
             clauses = list(_python_version_clauses(meta_data))
+            # clauses = meta_data.get('requires_python',[])
 
             if any(excludes_unsupported_versions(*clause)
                 for clause in clauses):
@@ -268,11 +279,38 @@ def _send_email_to_all_dependents(
             **kwargs
             )
 
-            # smtp.sendmail(
-            #     'pyshp@jamesparrott.dev',
-            #     ', '.join(email_addresses),
-            #     f"Subject: {email_payload['subject']}\n\n{email_payload['body']}",
-            #     )
+        payloads.append(email_payload)
 
-        send_email(email_payload)
+        # smtp.sendmail(
+        #     'pyshp@jamesparrott.dev',
+        #     ', '.join(email_addresses),
+        #     f"Subject: {email_payload['subject']}\n\n{email_payload['body']}",
+        #     )
+
+        # send_email(email_payload)
+
+
+    # >>> with open('pyshp_rev_deps.txt','at') as f, open('rdepends.json','rt') as j:
+    # ...     f.write('\n'.join(entry["name"].lower().replace('_','-') for entry in json.load(j)['items']))
+    # 
+
+    EMAILS_FILE.write_text(json.dumps(payloads))
+
+    # with open(EMAILS_FILE, 'at') as f:
+    #     for payload in payloads:
+    #         f.write(f'Sending email to: {payload["to"]}\n From: {payload["sender"]}\nSubject: {payload["subject"]}\n {payload["html"]} \n\n')
+
+
+    # return None
+
+    # response = pystmark.send_batch([pystmark.Message(**payload) 
+    #                                 for payload in payloads
+    #                                ],
+    #                                api_key=os.getenv('POSTMARK_API_KEY')
+    #                               )
+
+    # print(f'{response.status_code=}')
+    # print(f'{response.text=}')
+
+    # return response
 

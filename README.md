@@ -15,7 +15,7 @@ pip install warn-dependents
 
 ## Usage
 
-warn-dependents <sender_name> <sender_email> <project_name> <Python_version>
+POSTMARK_API_KEY=_____________ && warn-dependents <sender_name> <sender_email> <project_name> <Python_version>
 
 ## License
 

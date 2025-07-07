@@ -29,6 +29,7 @@ dependencies = [
   "requests",
   "nameutils",
   "inflect",
+  "pystmark",
 ]
 
 [project.urls]
@@ -37,6 +38,7 @@ Source = "https://github.com/JamesParrott/warn-dependents"
 
 [project.scripts]
 warn-dependents = "warn_dependents.cli:main"
+warn_dependents = "warn_dependents.cli:main"
 
 [tool.hatch.version]
 path = "src/warn_dependents/__about__.py"

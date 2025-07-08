@@ -5,9 +5,7 @@ import smtplib, ssl
 import string
 from typing import Iterator
 
-import pystmark
 import nameutils
-import inflect
 from sparkpost import SparkPost
 
 import maintainers_and_authors.api
@@ -66,7 +64,6 @@ def _given_names(full_name: str) -> str:
     return ' '.join(nameparts[1:])
 
 
-inflect_engine = inflect.engine()
 
 def _make_email_payload(
     to: frozenset[str],
@@ -184,9 +181,9 @@ def _send_email_via_sparkpost(email_payload):
 
     # https://github.com/SparkPost/python-sparkpost?tab=readme-ov-file#send-a-message
     # return sp.transmissions.send(
-    #     recipients=['james.parrott@proton.me'],
+    #     recipients=['test@example.com'],
     #     html='<p>Hello world</p>',
-    #     from_email='pyshp@mail.jamesparrott.dev',
+    #     from_email='you@mail.example.com',
     #     subject='Hello from python-sparkpost'
     # )
 
@@ -287,7 +284,7 @@ def _send_email_to_all_dependents(
         # payloads.append(email_payload)
 
         # smtp.sendmail(
-        #     'pyshp@jamesparrott.dev',
+        #     'test@example.com',
         #     ', '.join(email_addresses),
         #     f"Subject: {email_payload['subject']}\n\n{email_payload['body']}",
         #     )

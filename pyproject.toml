@@ -24,11 +24,9 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "rev-deps",
   "maintainers-and-authors",
   "requests",
   "nameutils",
-  "inflect",
   "sparkpost",
 ]
 

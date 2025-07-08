@@ -15,8 +15,36 @@ pip install warn-dependents
 
 ## Usage
 
-POSTMARK_API_KEY=_____________ && warn-dependents <sender_name> <sender_email> <project_name> <Python_version>
+The user interface deliberately reads from stdin (via maintainers-and-authors).
+
+echo project_name | warn-dependents <sender_name> <sender_email> <project_name> <Python_version>
+
+
+## Usage
+
+Breaking the steps down allows checks that all the required APIs are working,and double checking the list of recipients of the emails before hitting "send":
+
+Bash
+```console
+rev-deps project_name > revdeps.txt
+cat revdeps.txt | maintainers-and-authors > emails.txt
+SPARKPOST_API_KEY=_____________ 
+cat revdeps.txt | warn_dependents "Your name" yourself@example.com project_name 3.14
+```
+
+Cmd.exe
+```console
+rev-deps project_name > revdeps.txt
+type revdeps.txt | maintainers-and-authors > emails.txt
+set SPARKPOST_API_KEY=_____________ 
+type revdeps.txt | warn_dependents "Your name" yourself@example.com project_name 3.14
+```
+
+To live dangerously and do it all on one line:
+```
+SPARKPOST_API_KEY=_____________ && echo project_name | warn-dependents <sender_name> <sender_email> project_name <Python_version>
+```
 
 ## License
+AGPL3
 
-`warn-dependents` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.

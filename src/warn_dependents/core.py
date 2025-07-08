@@ -68,6 +68,7 @@ def _make_email_payload(
     sender_email: str,
     min_python_version: tuple,
     upstream_project_name: str,
+    discussion_link: str,
     projects_data: dict,
     subject: str | None = None,
     **kwargs,
@@ -87,15 +88,13 @@ def _make_email_payload(
         f"Pythons older than {min_python_version_str}. "
     )
 
-    url = f"http://www.github.com/{kwargs.get('Github_organisation', 'GeospatialPython')}/{upstream_project_name}/discussions"
-
     message_body = f"""\
 Dear {maintainers_and_authors_given_names or "Sir/Madam"},
 
 The developers of {upstream_project_name} (including myself) are considering dropping 
 support for Pythons older than version {min_python_version_str}.  Any feedback 
 about this is most welcome on our discussions page:
-{url}
+{discussion_link}
 particularly if it would have adverse effects for your projects: {", ".join(projects_data)}.
 
 No projects will be broken, as no old versions of {upstream_project_name} will be yanked.  This
@@ -187,7 +186,8 @@ def _send_email_to_all_dependents(
     sender_name: str,
     sender_email: str,
     min_python_version: tuple,
-    upstream_project_name: str | None = None,
+    upstream_project_name: str,
+    discussion_link: str,
     make_email_payload=_make_email_payload,
     # send_email = _send_email,
     maintnrs_and_authors_meta_data: dict | None = None,
@@ -264,7 +264,7 @@ def _send_email_to_all_dependents(
 
         if not projects_data:
             # None of the projects support the versions of Python to be dropped,
-            # so there is no need to warn their authors and maintainers.
+            # so there is no need to warn their authors and maint.
             continue
 
         email_payload = make_email_payload(
@@ -273,6 +273,7 @@ def _send_email_to_all_dependents(
             sender_email=sender_email,
             min_python_version=min_python_version,
             upstream_project_name=upstream_project_name,
+            discussion_link=discussion_link,
             projects_data=projects_data,
             **kwargs,
         )

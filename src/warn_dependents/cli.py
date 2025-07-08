@@ -10,9 +10,10 @@ def main(args=sys.argv[1:]) -> int:
     sender_email = args[1]
 
     project_name = args[2]
+    discussion_link = args[3]
     min_python_version = (
-        maintainers_and_authors.api.version_tuple_from_str(args[3])
-        if len(args) >= 4
+        maintainers_and_authors.api.version_tuple_from_str(args[4])
+        if len(args) >= 5
         else (3, 9)
     )
 
@@ -21,6 +22,7 @@ def main(args=sys.argv[1:]) -> int:
         sender_email,
         min_python_version,
         project_name,
+        discussion_link,
     )
 
     return 0

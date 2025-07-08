@@ -7,7 +7,7 @@ name = "warn-dependents"
 dynamic = ["version"]
 description = 'Email the authors and maintainers of all projects using a PyPi project (e.g. yours) downstream.  By default, warn them it is intended to drop support for old Python versions.'
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 license = "AGPL-3.0-or-later"
 keywords = []
 authors = [

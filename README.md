@@ -10,7 +10,7 @@ Email the authors and maintainers of all projects using a PyPi project (e.g. you
 ## Installation
 
 ```console
-pip install warn-dependents
+uv tool install warn-dependents
 ```
 
 ## Usage
